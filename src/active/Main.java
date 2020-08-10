@@ -82,7 +82,7 @@ public class Main {
 				e.printStackTrace();
 				
 		        long endTime = new Date().getTime();
-		        this.refList.add(new Response(endTime - startTime, "", false));
+		        this.refList.add(new Response(endTime - startTime, "error", false));
 			}
 		}
 
