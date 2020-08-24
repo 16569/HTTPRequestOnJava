@@ -1,11 +1,13 @@
-package active;
+package entry;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 
 public class HttpSendJSON {
     /**
@@ -15,8 +17,7 @@ public class HttpSendJSON {
      * @return     
      * @throws Exception 
      */
-    public String callPost(String strPostUrl, String JSON) throws Exception {
-
+    public String callPost(String strPostUrl, String JSON) throws Exception {    	
         HttpURLConnection con = null;
         StringBuffer result = new StringBuffer();
         try {
@@ -28,13 +29,17 @@ public class HttpSendJSON {
             con.setRequestMethod("POST");
             con.setRequestProperty("Accept-Language", "jp");
             // データがJSONであること、エンコードを指定する
-            con.setRequestProperty("Content-Type", "application/JSON; charset=utf-8");
+            con.setRequestProperty("Content-Type", "application/JSON; charset=utf-8");//utf-8
             // POSTデータの長さを設定
-            con.setRequestProperty("Content-Length", String.valueOf(JSON.length()));
+           	int len = JSON.getBytes(Charset.forName("utf-8")).length;
+            con.setRequestProperty("Content-Length", String.valueOf(len)); //String.valueOf(JSON.length()));
             // リクエストのbodyにJSON文字列を書き込む
-            OutputStreamWriter out = new OutputStreamWriter(con.getOutputStream());
-            out.write(JSON);
-            out.flush();
+            OutputStream out = con.getOutputStream();
+//            out.write(JSON);
+//            out.flush();
+            final PrintStream ps = new PrintStream(out, true, "utf-8");
+            ps.print(JSON);
+            ps.close();
             con.connect();
 
             // HTTPレスポンスコード
@@ -52,7 +57,7 @@ public class HttpSendJSON {
                 String line = null;
                 // 1行ずつテキストを読み込む
                 while ((line = bufReader.readLine()) != null) {
-                    result.append(line);
+                    result.append(line + "\r\n");
                 }
                 bufReader.close();
                 inReader.close();
