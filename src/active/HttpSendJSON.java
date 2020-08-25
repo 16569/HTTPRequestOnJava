@@ -8,6 +8,13 @@ import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.X509TrustManager;
 
 public class HttpSendJSON {
     /**
@@ -17,13 +24,27 @@ public class HttpSendJSON {
      * @return     
      * @throws Exception 
      */
-    public String callPost(String strPostUrl, String JSON) throws Exception {    	
+    public String callPost(String strPostUrl, String JSON) throws Exception {
+    	boolean isHttps = strPostUrl.contains("https");
         HttpURLConnection con = null;
         StringBuffer result = new StringBuffer();
         try {
+        	
+        	SSLSocketFactory factory = null;
+			SSLContext ctx = SSLContext.getInstance("TLS");
+			ctx.init(null, new NonAuthentication[] { new NonAuthentication() },
+					null);
+			factory = ctx.getSocketFactory();
 
             URL url = new URL(strPostUrl);
-            con = (HttpURLConnection) url.openConnection();
+            // ごり押し HTTP / HTTPS 対応
+            if(isHttps) {
+            	con = (HttpsURLConnection) url.openConnection();
+    	        ((HttpsURLConnection) con).setSSLSocketFactory(factory);
+            }else {
+            	con = (HttpURLConnection) url.openConnection();
+            }
+            
             // HTTPリクエストコード
             con.setDoOutput(true);
             con.setRequestMethod("POST");
@@ -78,4 +99,21 @@ public class HttpSendJSON {
         }
         return result.toString();
     }
+    
+    class NonAuthentication implements X509TrustManager {
+	@Override
+	public void checkClientTrusted(X509Certificate[] chain, String authType)
+			throws CertificateException {
+	}
+
+	@Override
+	public void checkServerTrusted(X509Certificate[] chain, String authType)
+			throws CertificateException {
+	}
+
+	@Override
+	public X509Certificate[] getAcceptedIssuers() {
+		return null;
+	}
+}
 }
