@@ -17,23 +17,23 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.X509TrustManager;
 
 public class HttpSendJSON {
-    /**
-     * JSON文字列の送信
-     * @param strPostUrl 送信先URL
-     * @param JSON 送信するJSON文字列
-     * @return     
-     * @throws Exception 
-     */
+
+	public static class ResponceNot200Exception extends Exception{
+		ResponceNot200Exception(String status){
+			this.status = status;
+		}
+		public String status = "";
+	}
+	
     public String callPost(String strPostUrl, String JSON) throws Exception {
     	boolean isHttps = strPostUrl.contains("https");
         HttpURLConnection con = null;
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
         try {
         	
         	SSLSocketFactory factory = null;
 			SSLContext ctx = SSLContext.getInstance("TLS");
-			ctx.init(null, new NonAuthentication[] { new NonAuthentication() },
-					null);
+			ctx.init(null, new NonAuthentication[] { new NonAuthentication() }, null);
 			factory = ctx.getSocketFactory();
 
             URL url = new URL(strPostUrl);
@@ -45,52 +45,43 @@ public class HttpSendJSON {
             	con = (HttpURLConnection) url.openConnection();
             }
             
-            // HTTPリクエストコード
             con.setDoOutput(true);
             con.setRequestMethod("POST");
             con.setRequestProperty("Accept-Language", "jp");
-            // データがJSONであること、エンコードを指定する
-            con.setRequestProperty("Content-Type", "application/JSON; charset=utf-8");//utf-8
-            // POSTデータの長さを設定
+            con.setRequestProperty("Content-Type", "application/JSON; charset=utf-8");
            	int len = JSON.getBytes(Charset.forName("utf-8")).length;
-            con.setRequestProperty("Content-Length", String.valueOf(len)); //String.valueOf(JSON.length()));
-            // リクエストのbodyにJSON文字列を書き込む
-            OutputStream out = con.getOutputStream();
-//            out.write(JSON);
-//            out.flush();
-            final PrintStream ps = new PrintStream(out, true, "utf-8");
-            ps.print(JSON);
-            ps.close();
+            con.setRequestProperty("Content-Length", String.valueOf(len));
+            try(OutputStream out = con.getOutputStream();PrintStream ps = new PrintStream(out, true, "utf-8");){
+	            ps.print(JSON);
+            }
             con.connect();
 
             // HTTPレスポンスコード
             final int status = con.getResponseCode();
             if (status == HttpURLConnection.HTTP_OK) {
                 // 通信に成功した
-                // テキストを取得する
-                final InputStream in = con.getInputStream();
                 String encoding = con.getContentEncoding();
                 if (null == encoding) {
                     encoding = "UTF-8";
                 }
-                final InputStreamReader inReader = new InputStreamReader(in, encoding);
-                final BufferedReader bufReader = new BufferedReader(inReader);
-                String line = null;
-                // 1行ずつテキストを読み込む
-                while ((line = bufReader.readLine()) != null) {
-                    result.append(line + "\r\n");
+                try(InputStream in = con.getInputStream();
+                	InputStreamReader inReader = new InputStreamReader(in, encoding);
+                	BufferedReader bufReader = new BufferedReader(inReader);){
+	                String line = null;
+	                // 1行ずつテキストを読み込む
+	                while ((line = bufReader.readLine()) != null) {
+	                    result.append(line + "\r\n");
+	                }
                 }
-                bufReader.close();
-                inReader.close();
-                in.close();
+
             } else {
-                // 通信が失敗した場合のレスポンスコードを表示
-                System.out.println(status);
+                throw new ResponceNot200Exception(String.valueOf(status));
             }
 
-        } catch (Exception e1) {
+        } catch (NullPointerException e1) {
             e1.printStackTrace();
-            throw e1;
+        } catch (ClassCastException e1) {
+            e1.printStackTrace();
         } finally {
             if (con != null) {
                 // コネクションを切断
@@ -99,21 +90,21 @@ public class HttpSendJSON {
         }
         return result.toString();
     }
-    
-    class NonAuthentication implements X509TrustManager {
-	@Override
-	public void checkClientTrusted(X509Certificate[] chain, String authType)
-			throws CertificateException {
-	}
 
-	@Override
-	public void checkServerTrusted(X509Certificate[] chain, String authType)
-			throws CertificateException {
-	}
+	class NonAuthentication implements X509TrustManager {
+		@Override
+		public void checkClientTrusted(X509Certificate[] chain, String authType)
+				throws CertificateException {
+		}
 
-	@Override
-	public X509Certificate[] getAcceptedIssuers() {
-		return null;
+		@Override
+		public void checkServerTrusted(X509Certificate[] chain, String authType)
+				throws CertificateException {
+		}
+
+		@Override
+		public X509Certificate[] getAcceptedIssuers() {
+			return null;
+		}
 	}
-}
 }
