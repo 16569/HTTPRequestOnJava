@@ -27,13 +27,15 @@ public class Main {
         CopyOnWriteArrayList<Response> resultList = new CopyOnWriteArrayList<Response>();
         
         es = Executors.newFixedThreadPool(threadNum);
-        
-        for(int i=0;i<threadNum;i++) {
-        	es.execute(new RunTask(postURL, json, resultList));
+	    try {
+	        for(int i=0;i<threadNum;i++) {
+	        	es.execute(new RunTask(postURL, json, resultList));
+	        }	
+        }finally {
+        	es.shutdown();
         }
-        
-		es.shutdown();
-        
+
+		
 		while(!es.isTerminated()) {
 	        try {
 				es.awaitTermination(50, TimeUnit.MILLISECONDS);
